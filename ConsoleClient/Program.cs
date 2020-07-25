@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Net.Sockets;
 using System.Text;
 using System.Threading;
@@ -37,18 +38,29 @@ namespace ConsoleClient
             NetworkStream stream = client.GetStream();
 
             byte[] myReadBuffer = new byte[1024];
-            StringBuilder myCompleteMessage = new StringBuilder();
 
-            do
+            await using (var ms = new MemoryStream())
             {
-                var numberOfBytesRead = await stream.ReadAsync(myReadBuffer, 0, myReadBuffer.Length);
+                do
+                {
+                    var numberOfBytesRead = await stream.ReadAsync(myReadBuffer, 0, myReadBuffer.Length);
+                    await ms.WriteAsync(myReadBuffer, 0, numberOfBytesRead);
+                } while (stream.DataAvailable);
 
-                myCompleteMessage.Append(Encoding.Default.GetString(myReadBuffer, 0, numberOfBytesRead));
+                var resultArray = ms.ToArray();
+                int count = resultArray.Length;
+                // Catch 0xFF 0xF9 "Go ahead" command
+                if (count >= 2)
+                {
+                    if (resultArray[^1] == 249
+                        && resultArray[^2] == 255)
+                    {
+                        count -= 2;
+                    }
+                }
+
+                return Encoding.Default.GetString(resultArray, 0, count);
             }
-            while (stream.DataAvailable);
-
-            return myCompleteMessage.ToString();
-
         }
 
         private static async Task WriteDataLoop(TcpClient client)

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Net.Sockets;
 using System.Text;
@@ -20,7 +21,7 @@ namespace MudBot.Services
         private readonly IBotFrameworkHttpAdapter _adapter;
         private readonly string _appId;
         private readonly ConcurrentDictionary<string, ConversationReference> _conversationReferences;
-        private static readonly Encoding _encoding = Encoding.GetEncoding("windows-1251");
+        private static readonly Encoding _encoding = Encoding.Default;
 
         public TcpClientsService(IConfiguration configuration, IBotFrameworkHttpAdapter adapter, ConcurrentDictionary<string, ConversationReference> conversationReferences)
         {
@@ -46,6 +47,7 @@ namespace MudBot.Services
                 if (!tcpClient.Connected)
                 {
                     _tcpClients.Remove(userId);
+                    tcpClient.Close();
                     return;
                 }
                 message += Environment.NewLine;
@@ -57,7 +59,9 @@ namespace MudBot.Services
             {
                 tcpClient = new TcpClient("bylins.su", 4000);
                 _tcpClients[userId] = tcpClient;
-                var chooseEncodingMsg = "2" + Environment.NewLine;
+                Thread.Sleep(500);
+                await ReadData(tcpClient); // get rid of encoding choose
+                var chooseEncodingMsg = "5" + Environment.NewLine;
                 await tcpClient.GetStream().WriteAsync(_encoding.GetBytes(chooseEncodingMsg), 0,
                     chooseEncodingMsg.Length);
                 Task.Run(() => ReadDataLoop(userId, tcpClient, _conversationReferences[userId]));
@@ -66,7 +70,12 @@ namespace MudBot.Services
 
         public void ClearTcpClient(string userId)
         {
-            _tcpClients.Remove(userId);
+            if (_tcpClients.ContainsKey(userId))
+            {
+                var tcpClient = _tcpClients[userId];
+                tcpClient.Close();
+                _tcpClients.Remove(userId);
+            }
         }
 
         private async Task ReadDataLoop(string userId, TcpClient tcpClient, ConversationReference conversationReference)
@@ -76,22 +85,46 @@ namespace MudBot.Services
                 if (!tcpClient.Connected)
                 {
                     _tcpClients.Remove(userId);
+                    tcpClient.Close();
                     return;
                 }
 
                 string message = await ReadData(tcpClient);
+                if (string.IsNullOrEmpty(message))
+                {
+                    tcpClient.Client.Disconnect(false);
+                    continue;
+                }
+
                 await ((BotAdapter) _adapter).ContinueConversationAsync(_appId, conversationReference,
                     async (context, token) =>
                     {
-                        //message = new Regex(@"\x1B\[[^@-~]*[@-~]").Replace(message, String.Empty);
-
-                        message = message.Replace("яя", "я");
+                        //message = message.Replace("яя", "я");
+                        message = new Regex(@"\x1B\[[^@-~]*[@-~]").Replace(message, String.Empty);
                         message = string.Format("```{1}{0}{1}```", message, Environment.NewLine);
 
-                        var actions = message.Split(' ', '\n').Where(x => x.Contains('['))
-                            .Select(x => x.Replace("[", string.Empty).Replace("]", string.Empty));
+                        List<string> actions;
+                        if (message.Contains("1)") && message.Contains("2)"))
+                        {
+                            actions = new List<string>
+                            {
+                                "1",
+                                "2"
+                            };
+                            int i = 3;
+                            while (message.Contains(i + ")"))
+                            {
+                                actions.Add(i.ToString());
+                                i++;
+                            }
+                        }
+                        else
+                        {
+                            actions = message.Split(' ', '\n').Where(x => x.Contains('[') && x.Any(char.IsLetter))
+                                .Select(x => x.Replace("[", string.Empty).Replace("]", string.Empty)).ToList();
+                        }
 
-                        if (actions.Any())
+                        if (actions.Count > 0)
                         {
                             var reply = MessageFactory.Text(message);
                             reply.SuggestedActions = new SuggestedActions()
@@ -107,7 +140,9 @@ namespace MudBot.Services
                         }
                         else
                         {
-                            await context.SendActivityAsync(message, cancellationToken: token);
+                            var reply = MessageFactory.Text(message);
+                            reply.SuggestedActions = new SuggestedActions();
+                            await context.SendActivityAsync(reply, token);
                         }
                     }, default(CancellationToken));
             }
@@ -118,18 +153,30 @@ namespace MudBot.Services
             NetworkStream stream = client.GetStream();
 
             byte[] myReadBuffer = new byte[1024];
-            StringBuilder myCompleteMessage = new StringBuilder();
 
-            do
+            await using (var ms = new MemoryStream())
             {
-                var numberOfBytesRead = await stream.ReadAsync(myReadBuffer, 0, myReadBuffer.Length);
+                do
+                {
+                    var numberOfBytesRead = await stream.ReadAsync(myReadBuffer, 0, myReadBuffer.Length);
+                    await ms.WriteAsync(myReadBuffer, 0, numberOfBytesRead);
+                } while (stream.DataAvailable);
 
-                myCompleteMessage.Append(_encoding.GetString(myReadBuffer, 0, numberOfBytesRead));
+                var resultArray = ms.ToArray();
+                int count = resultArray.Length;
+                
+                // Catch 0xFF 0xF9 "Go ahead" command at the end of stream
+                if (count >= 2)
+                {
+                    if (resultArray[^1] == 249
+                        && resultArray[^2] == 255)
+                    {
+                        count -= 2; // and remove two data bytes
+                    }
+                }
+
+                return _encoding.GetString(resultArray, 0, count);
             }
-            while (stream.DataAvailable);
-
-            return myCompleteMessage.ToString();
-
         }
     }
 }

@@ -38,6 +38,22 @@ namespace MudBot.Bots
             if (turnContext.Activity.Text == "/start")
                 _tcpClientsService.ClearTcpClient(userId);
 
+            if (turnContext.Activity.Text == "/stop")
+            {
+                _tcpClientsService.ClearTcpClient(userId);
+                var reply = MessageFactory.Text("Вы вышли из игры.");
+
+                reply.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = new List<CardAction>()
+                    {
+                        new CardAction() { Title = "Играть!", Type = ActionTypes.ImBack, Value = "Играть!" },
+                    },
+                };
+                await turnContext.SendActivityAsync(reply, cancellationToken);
+                return;
+            }
+
             await _tcpClientsService.SendMessage(userId,
                 turnContext.Activity.Text);
         }
