@@ -120,8 +120,34 @@ namespace MudBot.Services
                         }
                         else
                         {
-                            actions = message.Split(' ', '\n').Where(x => x.Contains('[') && x.Any(char.IsLetter))
-                                .Select(x => x.Replace("[", string.Empty).Replace("]", string.Empty)).ToList();
+                            actions = message.Split(' ', '\n').Where(x =>
+                                    x.Contains('[') && x.Any(char.IsLetter))
+                                .Select(x => x.Replace("[", string.Empty).Replace("]", string.Empty)
+                                ).ToList();
+                        }
+
+                        var exitsPattern = "Вых:";
+                        var exitsIndex = message.LastIndexOf(exitsPattern);
+                        if (exitsIndex >= 0)
+                        {
+                            exitsIndex += exitsPattern.Length;
+                            if (message.IndexOf('С', exitsIndex) != -1)
+                                actions.Add("С");
+                            if (message.IndexOf('В', exitsIndex) != -1)
+                                actions.Add("В");
+                            if (message.IndexOf('Ю', exitsIndex) != -1)
+                                actions.Add("Ю");
+                            if (message.IndexOf('З', exitsIndex) != -1)
+                                actions.Add("З");
+                            if (message.IndexOf('^', exitsIndex) != -1)
+                                actions.Add("вв");
+                            if (message.IndexOf('v', exitsIndex) != -1)
+                                actions.Add("вн");
+                        }
+
+                        if (message.Contains("<RETURN>"))
+                        {
+                            actions.Add("/return");
                         }
 
                         if (actions.Count > 0)

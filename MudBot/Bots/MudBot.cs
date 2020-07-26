@@ -54,6 +54,12 @@ namespace MudBot.Bots
                 return;
             }
 
+            if (turnContext.Activity.Text == "/return")
+            {
+                await _tcpClientsService.SendMessage(userId, Environment.NewLine);
+                return;
+            }
+
             await _tcpClientsService.SendMessage(userId,
                 turnContext.Activity.Text);
         }
