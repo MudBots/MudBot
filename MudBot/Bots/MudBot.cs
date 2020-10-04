@@ -62,8 +62,9 @@ namespace MudBot.Bots
 
             if (turnContext.Activity.Text == "/help")
             {
-                await _tcpClientsService.SendMessage(userId,
+                var reply = MessageFactory.Text(
                     @"Бот позволяет подключиться к текстовой онлайн-игре ""Былины"" (bylins.su). Сайт бота https://github.com/kcherenkov/BylinasBot");
+                await turnContext.SendActivityAsync(reply, cancellationToken);
                 return;
             }
 
