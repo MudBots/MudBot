@@ -60,6 +60,13 @@ namespace MudBot.Bots
                 return;
             }
 
+            if (turnContext.Activity.Text == "/help")
+            {
+                await _tcpClientsService.SendMessage(userId,
+                    @"Бот позволяет подключиться к текстовой онлайн-игре ""Былины"" (bylins.su). Сайт бота https://github.com/kcherenkov/BylinasBot");
+                return;
+            }
+
             await _tcpClientsService.SendMessage(userId,
                 turnContext.Activity.Text);
         }
