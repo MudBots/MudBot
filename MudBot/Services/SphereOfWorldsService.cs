@@ -57,11 +57,11 @@ namespace MudBot.Services
             }
             else
             {
-                tcpClient = new TcpClient("sowmud.su", 5555);
+                tcpClient = new TcpClient("sowmud.ru", 5555);
                 _tcpClients[userId] = tcpClient;
                 Thread.Sleep(500);
                 await ReadData(tcpClient); // get rid of encoding choose
-                var chooseEncodingMsg = "0" + Environment.NewLine;
+                var chooseEncodingMsg = "1" + Environment.NewLine;
                 await tcpClient.GetStream().WriteAsync(_encoding.GetBytes(chooseEncodingMsg), 0,
                     chooseEncodingMsg.Length);
                 Task.Run(() => ReadDataLoop(userId, tcpClient, _conversationReferences[userId]));
@@ -99,7 +99,7 @@ namespace MudBot.Services
                 await ((BotAdapter) _adapter).ContinueConversationAsync(_appId, conversationReference,
                     async (context, token) =>
                     {
-                        //message = message.Replace("яя", "я");
+                        message = message.Replace("яя", "я");
                         message = new Regex(@"\x1B\[[^@-~]*[@-~]").Replace(message, String.Empty);
                         message = string.Format("```{1}{0}{1}```", message, Environment.NewLine);
 

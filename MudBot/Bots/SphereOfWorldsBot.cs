@@ -63,7 +63,7 @@ namespace MudBot.Bots
             if (turnContext.Activity.Text == "/help")
             {
                 var reply = MessageFactory.Text(
-                    @"Бот позволяет подключиться к текстовой онлайн-игре ""Былины"" (bylins.su). Сайт бота https://github.com/kcherenkov/BylinasBot");
+                    @"Бот позволяет подключиться к текстовой онлайн-игре ""Сфера Миров"" (sowmud.ru). Сайт бота https://github.com/kcherenkov/BylinasBot");
                 await turnContext.SendActivityAsync(reply, cancellationToken);
                 return;
             }
@@ -76,7 +76,7 @@ namespace MudBot.Bots
             ITurnContext<IConversationUpdateActivity> turnContext, CancellationToken cancellationToken)
         {
             var welcomeText =
-                "МАД(MUD) Былины - это русская и абсолютно бесплатная сетевая текстовая игра.\n\nНаш мир выгодно отличается от остальных игр подобного рода тем, что основан на русских сказках и преданиях, а не является очередной вариацией на тему Средиземья с уже слегка поднадоевшими эльфами, хоббитами и совершенно однотипным набором основных игровых зон. Игра не требует какого-то четкого отыгрывания роли, хотя и старается быть ролевой.";
+                "Перед вами проект многопользовательской сетевой игры типа MultiUser Dimension/Dungeon (MUD), или как его еще называют по русски – МУД или МАД. Это проект принципиально нового, русскоязычного мада, который создается опытными игроками, стремящимися сделать по настоящему интересную и популярную многопользовательскую игру.";
 
             var reply = MessageFactory.Text(welcomeText);
 

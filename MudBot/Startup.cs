@@ -32,8 +32,8 @@ namespace MudBot
             services.AddSingleton<ConcurrentDictionary<string, ConversationReference>>();
 
             // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.s
-            services.AddBot<BylinasBot>();
-            services.AddBot<SphereOfWorldsBot>();
+            services.AddTransient<BylinasBot>();
+            services.AddTransient<SphereOfWorldsBot>();
 
             services.AddSingleton<BylinasService>();
             services.AddSingleton<SphereOfWorldsService>();
