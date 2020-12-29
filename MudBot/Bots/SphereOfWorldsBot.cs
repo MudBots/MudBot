@@ -10,16 +10,16 @@ using MudBot.Services;
 
 namespace MudBot.Bots
 {
-    public class MudBot : ActivityHandler
+    public class SphereOfWorldsBot : ActivityHandler
     {
-        private readonly TcpClientsService _tcpClientsService;
+        private readonly SphereOfWorldsService _sphereOfWorldsService;
 
         // Dependency injected dictionary for storing ConversationReference objects used in NotifyController to proactively message users
         private readonly ConcurrentDictionary<string, ConversationReference> _conversationReferences;
 
-        public MudBot(TcpClientsService tcpClientsService, ConcurrentDictionary<string, ConversationReference> conversationReferences)
+        public SphereOfWorldsBot(SphereOfWorldsService bylinasService, ConcurrentDictionary<string, ConversationReference> conversationReferences)
         {
-            _tcpClientsService = tcpClientsService;
+            _sphereOfWorldsService = bylinasService;
             _conversationReferences = conversationReferences;
         }
 
@@ -36,11 +36,11 @@ namespace MudBot.Bots
             var userId = turnContext.Activity.GetConversationReference().User.Id;
 
             if (turnContext.Activity.Text == "/start")
-                _tcpClientsService.ClearTcpClient(userId);
+                _sphereOfWorldsService.ClearTcpClient(userId);
 
             if (turnContext.Activity.Text == "/stop")
             {
-                _tcpClientsService.ClearTcpClient(userId);
+                _sphereOfWorldsService.ClearTcpClient(userId);
                 var reply = MessageFactory.Text("Вы вышли из игры.");
 
                 reply.SuggestedActions = new SuggestedActions()
@@ -56,7 +56,7 @@ namespace MudBot.Bots
 
             if (turnContext.Activity.Text == "/return")
             {
-                await _tcpClientsService.SendMessage(userId, Environment.NewLine);
+                await _sphereOfWorldsService.SendMessage(userId, Environment.NewLine);
                 return;
             }
 
@@ -68,7 +68,7 @@ namespace MudBot.Bots
                 return;
             }
 
-            await _tcpClientsService.SendMessage(userId,
+            await _sphereOfWorldsService.SendMessage(userId,
                 turnContext.Activity.Text);
         }
 

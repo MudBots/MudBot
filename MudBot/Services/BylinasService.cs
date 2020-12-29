@@ -15,7 +15,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace MudBot.Services
 {
-    public class TcpClientsService
+    public class BylinasService
     {
         private readonly Dictionary<string, TcpClient> _tcpClients = new Dictionary<string, TcpClient>();
         private readonly IBotFrameworkHttpAdapter _adapter;
@@ -23,7 +23,7 @@ namespace MudBot.Services
         private readonly ConcurrentDictionary<string, ConversationReference> _conversationReferences;
         private static readonly Encoding _encoding = Encoding.Default;
 
-        public TcpClientsService(IConfiguration configuration, IBotFrameworkHttpAdapter adapter, ConcurrentDictionary<string, ConversationReference> conversationReferences)
+        public BylinasService(IConfiguration configuration, IBotFrameworkHttpAdapter adapter, ConcurrentDictionary<string, ConversationReference> conversationReferences)
         {
             _adapter = adapter;
             _conversationReferences = conversationReferences;
