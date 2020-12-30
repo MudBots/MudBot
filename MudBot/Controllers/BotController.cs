@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using MudBot.Bots;
+using MudBot.Services;
 
 namespace MudBot.Controllers
 {
@@ -19,12 +20,35 @@ namespace MudBot.Controllers
         private readonly IBotFrameworkHttpAdapter _adapter;
         private readonly BylinasBot _bylinasBot;
         private readonly SphereOfWorldsBot _sphereOfWorldsBot;
+        private readonly BylinasService _bylinasService;
+        private readonly SphereOfWorldsService _sphereOfWorldsService;
 
-        public BotController(IBotFrameworkHttpAdapter adapter, BylinasBot bylinasBot, SphereOfWorldsBot sphereOfWorldsBot)
+        public BotController(IBotFrameworkHttpAdapter adapter, BylinasBot bylinasBot,
+            SphereOfWorldsBot sphereOfWorldsBot, BylinasService bylinasService,
+            SphereOfWorldsService sphereOfWorldsService)
         {
             _adapter = adapter;
             _bylinasBot = bylinasBot;
             _sphereOfWorldsBot = sphereOfWorldsBot;
+            _bylinasService = bylinasService;
+            _sphereOfWorldsService = sphereOfWorldsService;
+        }
+
+        [HttpGet("statistics")]
+        public string GetStatistics()
+        {
+            string result = $"Bylinas active TcpClients = {_bylinasService.TcpClients.Count}\n";
+            foreach (var tcpClient in _bylinasService.TcpClients)
+            {
+                result += "  " + tcpClient.Key + "\n";
+            }
+            result += $"\nSphere of Worlds active TcpClients = {_sphereOfWorldsService.TcpClients.Count}\n";
+            foreach (var tcpClient in _sphereOfWorldsService.TcpClients)
+            {
+                result += "  " + tcpClient.Key + "\n";
+            }
+
+            return result;
         }
 
         [HttpPost("bylinas")]

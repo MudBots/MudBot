@@ -36,11 +36,11 @@ namespace MudBot.Bots
             var userId = turnContext.Activity.GetConversationReference().User.Id;
 
             if (turnContext.Activity.Text == "/start")
-                _sphereOfWorldsService.ClearTcpClient(userId);
+                _sphereOfWorldsService.CloseTcpClient(userId);
 
             if (turnContext.Activity.Text == "/stop")
             {
-                _sphereOfWorldsService.ClearTcpClient(userId);
+                _sphereOfWorldsService.CloseTcpClient(userId);
                 var reply = MessageFactory.Text("Вы вышли из игры.");
 
                 reply.SuggestedActions = new SuggestedActions()
