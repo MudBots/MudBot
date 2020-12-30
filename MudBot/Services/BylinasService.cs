@@ -33,7 +33,7 @@ namespace MudBot.Services
             _adapter = adapter;
             _conversationReferences = conversationReferences;
             _logger = logger;
-            _appId = configuration["MicrosoftAppId"];
+            _appId = configuration["MicrosoftAppId_Bylinas"];
 
             // If the channel is the Emulator, and authentication is not in use,
             // the AppId will be null.  We generate a random AppId for this case only.
