@@ -12,21 +12,27 @@ using Microsoft.Bot.Builder;
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
 
 namespace MudBot.Services
 {
-    public class TcpClientsService
+    public class BylinasService
     {
+        private readonly ILogger _logger;
         private readonly Dictionary<string, TcpClient> _tcpClients = new Dictionary<string, TcpClient>();
+        public Dictionary<string, TcpClient> TcpClients => _tcpClients;
+
         private readonly IBotFrameworkHttpAdapter _adapter;
         private readonly string _appId;
         private readonly ConcurrentDictionary<string, ConversationReference> _conversationReferences;
         private static readonly Encoding _encoding = Encoding.Default;
 
-        public TcpClientsService(IConfiguration configuration, IBotFrameworkHttpAdapter adapter, ConcurrentDictionary<string, ConversationReference> conversationReferences)
+        public BylinasService(IConfiguration configuration, IBotFrameworkHttpAdapter adapter,
+            ConcurrentDictionary<string, ConversationReference> conversationReferences, ILogger<BylinasService> logger)
         {
             _adapter = adapter;
             _conversationReferences = conversationReferences;
+            _logger = logger;
             _appId = configuration["MicrosoftAppId"];
 
             // If the channel is the Emulator, and authentication is not in use,
@@ -46,8 +52,7 @@ namespace MudBot.Services
                 tcpClient = _tcpClients[userId];
                 if (!tcpClient.Connected)
                 {
-                    _tcpClients.Remove(userId);
-                    tcpClient.Close();
+                    CloseTcpClient(userId, tcpClient);
                     return;
                 }
                 message += Environment.NewLine;
@@ -59,6 +64,7 @@ namespace MudBot.Services
             {
                 tcpClient = new TcpClient("bylins.su", 4000);
                 _tcpClients[userId] = tcpClient;
+                _logger.LogInformation("Open new TcpClient for userid={0}", userId);
                 Thread.Sleep(500);
                 await ReadData(tcpClient); // get rid of encoding choose
                 var chooseEncodingMsg = "5" + Environment.NewLine;
@@ -68,13 +74,12 @@ namespace MudBot.Services
             }
         }
 
-        public void ClearTcpClient(string userId)
+        public void CloseTcpClient(string userId)
         {
             if (_tcpClients.ContainsKey(userId))
             {
                 var tcpClient = _tcpClients[userId];
-                tcpClient.Close();
-                _tcpClients.Remove(userId);
+                CloseTcpClient(userId, tcpClient);
             }
         }
 
@@ -84,8 +89,7 @@ namespace MudBot.Services
             {
                 if (!tcpClient.Connected)
                 {
-                    _tcpClients.Remove(userId);
-                    tcpClient.Close();
+                    CloseTcpClient(userId, tcpClient);
                     return;
                 }
 
@@ -93,6 +97,7 @@ namespace MudBot.Services
                 if (string.IsNullOrEmpty(message))
                 {
                     tcpClient.Client.Disconnect(false);
+                    _logger.LogInformation("Disconnected TcpClient for userId={0}", userId);
                     continue;
                 }
 
@@ -172,6 +177,13 @@ namespace MudBot.Services
                         }
                     }, default(CancellationToken));
             }
+        }
+
+        private void CloseTcpClient(string userId, TcpClient tcpClient)
+        {
+            tcpClient.Close();
+            _tcpClients.Remove(userId);
+            _logger.LogInformation("Closed TcpClient for userId={0}", userId);
         }
 
         private static async Task<string> ReadData(TcpClient client)

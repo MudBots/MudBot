@@ -10,16 +10,16 @@ using MudBot.Services;
 
 namespace MudBot.Bots
 {
-    public class MudBot : ActivityHandler
+    public class BylinasBot : ActivityHandler
     {
-        private readonly TcpClientsService _tcpClientsService;
+        private readonly BylinasService _bylinasService;
 
         // Dependency injected dictionary for storing ConversationReference objects used in NotifyController to proactively message users
         private readonly ConcurrentDictionary<string, ConversationReference> _conversationReferences;
 
-        public MudBot(TcpClientsService tcpClientsService, ConcurrentDictionary<string, ConversationReference> conversationReferences)
+        public BylinasBot(BylinasService bylinasService, ConcurrentDictionary<string, ConversationReference> conversationReferences)
         {
-            _tcpClientsService = tcpClientsService;
+            _bylinasService = bylinasService;
             _conversationReferences = conversationReferences;
         }
 
@@ -36,11 +36,11 @@ namespace MudBot.Bots
             var userId = turnContext.Activity.GetConversationReference().User.Id;
 
             if (turnContext.Activity.Text == "/start")
-                _tcpClientsService.ClearTcpClient(userId);
+                _bylinasService.CloseTcpClient(userId);
 
             if (turnContext.Activity.Text == "/stop")
             {
-                _tcpClientsService.ClearTcpClient(userId);
+                _bylinasService.CloseTcpClient(userId);
                 var reply = MessageFactory.Text("Вы вышли из игры.");
 
                 reply.SuggestedActions = new SuggestedActions()
@@ -56,7 +56,7 @@ namespace MudBot.Bots
 
             if (turnContext.Activity.Text == "/return")
             {
-                await _tcpClientsService.SendMessage(userId, Environment.NewLine);
+                await _bylinasService.SendMessage(userId, Environment.NewLine);
                 return;
             }
 
@@ -68,7 +68,7 @@ namespace MudBot.Bots
                 return;
             }
 
-            await _tcpClientsService.SendMessage(userId,
+            await _bylinasService.SendMessage(userId,
                 turnContext.Activity.Text);
         }
 

@@ -12,6 +12,7 @@ using Microsoft.Bot.Schema;
 using Microsoft.BotBuilderSamples;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
+using MudBot.Bots;
 using MudBot.Services;
 
 namespace MudBot
@@ -30,10 +31,12 @@ namespace MudBot
             // Create a global hashset for our ConversationReferences
             services.AddSingleton<ConcurrentDictionary<string, ConversationReference>>();
 
-            // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.
-            services.AddTransient<IBot, Bots.MudBot>();
+            // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.s
+            services.AddTransient<BylinasBot>();
+            services.AddTransient<SphereOfWorldsBot>();
 
-            services.AddSingleton<TcpClientsService>();
+            services.AddSingleton<BylinasService>();
+            services.AddSingleton<SphereOfWorldsService>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
