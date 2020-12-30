@@ -3,15 +3,17 @@
 
 using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Builder.TraceExtensions;
+using Microsoft.Bot.Connector.Authentication;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
 
-namespace Microsoft.BotBuilderSamples
+namespace MudBot
 {
     public class AdapterWithErrorHandler : BotFrameworkHttpAdapter
     {
-        public AdapterWithErrorHandler(IConfiguration configuration, ILogger<BotFrameworkHttpAdapter> logger)
-            : base(configuration, logger)
+        public AdapterWithErrorHandler(IConfiguration configuration, ICredentialProvider credentialProvider,
+            ILogger<BotFrameworkHttpAdapter> logger)
+            : base(credentialProvider, logger: logger)
         {
             OnTurnError = async (turnContext, exception) =>
             {
@@ -26,7 +28,8 @@ namespace Microsoft.BotBuilderSamples
                 await turnContext.SendActivityAsync("To continue to run this bot, please fix the bot source code.");
 
                 // Send a trace activity, which will be displayed in the Bot Framework Emulator
-                await turnContext.TraceActivityAsync("OnTurnError Trace", exception.Message, "https://www.botframework.com/schemas/error", "TurnError");
+                await turnContext.TraceActivityAsync("OnTurnError Trace", exception.Message,
+                    "https://www.botframework.com/schemas/error", "TurnError");
             };
         }
     }
