@@ -99,7 +99,7 @@ namespace MudBot.Services
                 }
 
                 await ((BotAdapter) _adapter).ContinueConversationAsync(_appId, conversationReference,
-                    async (context, token) => await BylinasBot.BotCallback(message, context, token),
+                    async (context, token) => await SphereOfWorldsBot.BotCallback(message, context, token),
                     default(CancellationToken));
             }
         }
