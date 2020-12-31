@@ -22,17 +22,17 @@ namespace MudBot.Bots
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext,
             CancellationToken cancellationToken)
         {
-            var userId = turnContext.Activity.GetConversationReference().User.Id;
+            var conversationId = turnContext.Activity.Conversation.Id;
             var message = turnContext.Activity.Text;
 
             switch (message)
             {
                 case "/start":
-                    _sphereOfWorldsService.CloseTcpClient(userId);
+                    _sphereOfWorldsService.CloseTcpClient(conversationId);
                     break;
                 case "/stop":
                 {
-                    _sphereOfWorldsService.CloseTcpClient(userId);
+                    _sphereOfWorldsService.CloseTcpClient(conversationId);
                     var reply = MessageFactory.Text("Вы вышли из игры.");
 
                     reply.SuggestedActions = new SuggestedActions()
@@ -57,7 +57,7 @@ namespace MudBot.Bots
                 }
             }
 
-            await _sphereOfWorldsService.SendMessage(userId, message, turnContext.Activity.GetConversationReference());
+            await _sphereOfWorldsService.SendMessage(conversationId, message, turnContext.Activity.GetConversationReference());
         }
 
         protected override async Task OnMembersAddedAsync(IList<ChannelAccount> membersAdded,
