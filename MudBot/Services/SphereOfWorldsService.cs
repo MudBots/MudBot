@@ -2,10 +2,8 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Net.Sockets;
 using System.Text;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
@@ -13,26 +11,24 @@ using Microsoft.Bot.Builder.Integration.AspNet.Core;
 using Microsoft.Bot.Schema;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Logging;
+using MudBot.Bots;
 
 namespace MudBot.Services
 {
     public class SphereOfWorldsService
     {
         private readonly ILogger _logger;
-        private readonly Dictionary<string, TcpClient> _tcpClients = new Dictionary<string, TcpClient>();
-        public Dictionary<string, TcpClient> TcpClients => _tcpClients;
+        private readonly ConcurrentDictionary<string, TcpClient> _tcpClients = new ConcurrentDictionary<string, TcpClient>();
+        public ConcurrentDictionary<string, TcpClient> TcpClients => _tcpClients;
 
         private readonly IBotFrameworkHttpAdapter _adapter;
         private readonly string _appId;
-        private readonly ConcurrentDictionary<string, ConversationReference> _conversationReferences;
         private static Encoding _encoding = CodePagesEncodingProvider.Instance.GetEncoding("windows-1251");
 
         public SphereOfWorldsService(IConfiguration configuration, IBotFrameworkHttpAdapter adapter,
-            ConcurrentDictionary<string, ConversationReference> conversationReferences,
             ILogger<SphereOfWorldsService> logger)
         {
             _adapter = adapter;
-            _conversationReferences = conversationReferences;
             _logger = logger;
             _appId = configuration["MicrosoftAppId_SphereOfWorlds"];
 
@@ -45,15 +41,15 @@ namespace MudBot.Services
             }
         }
 
-        public async Task SendMessage(string userId, string message)
+        public async Task SendMessage(string conversationId, string message, ConversationReference conversationReference)
         {
             TcpClient tcpClient;
-            if (_tcpClients.ContainsKey(userId))
+            if (_tcpClients.ContainsKey(conversationId))
             {
-                tcpClient = _tcpClients[userId];
+                tcpClient = _tcpClients[conversationId];
                 if (!tcpClient.Connected)
                 {
-                    CloseTcpClient(userId, tcpClient);
+                    CloseTcpClient(conversationId, tcpClient);
                     return;
                 }
                 message += Environment.NewLine;
@@ -64,33 +60,33 @@ namespace MudBot.Services
             else
             {
                 tcpClient = new TcpClient("sowmud.ru", 5555);
-                _tcpClients[userId] = tcpClient;
-                _logger.LogInformation("Open new TcpClient for userid={0}", userId);
+                _tcpClients[conversationId] = tcpClient;
+                _logger.LogInformation("Open new TcpClient for conversationId={0}", conversationId);
                 Thread.Sleep(500);
                 await ReadData(tcpClient); // get rid of encoding choose
                 var chooseEncodingMsg = "1" + Environment.NewLine;
                 await tcpClient.GetStream().WriteAsync(_encoding.GetBytes(chooseEncodingMsg), 0,
                     chooseEncodingMsg.Length);
-                Task.Run(() => ReadDataLoop(userId, tcpClient, _conversationReferences[userId]));
+                Task.Run(async () => await ReadDataLoop(conversationId, tcpClient, conversationReference));
             }
         }
 
-        public void CloseTcpClient(string userId)
+        public void CloseTcpClient(string conversationId)
         {
-            if (_tcpClients.ContainsKey(userId))
+            if (_tcpClients.ContainsKey(conversationId))
             {
-                var tcpClient = _tcpClients[userId];
-                CloseTcpClient(userId, tcpClient);
+                var tcpClient = _tcpClients[conversationId];
+                CloseTcpClient(conversationId, tcpClient);
             }
         }
 
-        private async Task ReadDataLoop(string userId, TcpClient tcpClient, ConversationReference conversationReference)
+        private async Task ReadDataLoop(string conversationId, TcpClient tcpClient, ConversationReference conversationReference)
         {
             while (true)
             {
                 if (!tcpClient.Connected)
                 {
-                    CloseTcpClient(userId, tcpClient);
+                    CloseTcpClient(conversationId, tcpClient);
                     return;
                 }
 
@@ -98,93 +94,21 @@ namespace MudBot.Services
                 if (string.IsNullOrEmpty(message))
                 {
                     tcpClient.Client.Disconnect(false);
-                    _logger.LogInformation("Disconnected TcpClient for userId={0}", userId);
+                    _logger.LogInformation("Disconnected TcpClient for conversationId={0}", conversationId);
                     continue;
                 }
 
                 await ((BotAdapter) _adapter).ContinueConversationAsync(_appId, conversationReference,
-                    async (context, token) =>
-                    {
-                        message = message.Replace("яя", "я");
-                        message = new Regex(@"\x1B\[[^@-~]*[@-~]").Replace(message, String.Empty);
-                        message = string.Format("```{1}{0}{1}```", message, Environment.NewLine);
-
-                        List<string> actions;
-                        if (message.Contains("1)") && message.Contains("2)"))
-                        {
-                            actions = new List<string>
-                            {
-                                "1",
-                                "2"
-                            };
-                            int i = 3;
-                            while (message.Contains(i + ")"))
-                            {
-                                actions.Add(i.ToString());
-                                i++;
-                            }
-                        }
-                        else
-                        {
-                            actions = message.Split(' ', '\n').Where(x =>
-                                    x.Contains('[') && x.Any(char.IsLetter))
-                                .Select(x => x.Replace("[", string.Empty).Replace("]", string.Empty)
-                                ).ToList();
-                        }
-
-                        var exitsPattern = "Вых:";
-                        var exitsIndex = message.LastIndexOf(exitsPattern);
-                        if (exitsIndex >= 0)
-                        {
-                            exitsIndex += exitsPattern.Length;
-                            if (message.IndexOf('С', exitsIndex) != -1)
-                                actions.Add("С");
-                            if (message.IndexOf('В', exitsIndex) != -1)
-                                actions.Add("В");
-                            if (message.IndexOf('Ю', exitsIndex) != -1)
-                                actions.Add("Ю");
-                            if (message.IndexOf('З', exitsIndex) != -1)
-                                actions.Add("З");
-                            if (message.IndexOf('^', exitsIndex) != -1)
-                                actions.Add("вв");
-                            if (message.IndexOf('v', exitsIndex) != -1)
-                                actions.Add("вн");
-                        }
-
-                        if (message.Contains("<RETURN>"))
-                        {
-                            actions.Add("/return");
-                        }
-
-                        if (actions.Count > 0)
-                        {
-                            var reply = MessageFactory.Text(message);
-                            reply.SuggestedActions = new SuggestedActions()
-                            {
-                                Actions = actions.Select(x => new CardAction
-                                {
-                                    Title = x,
-                                    Type = ActionTypes.ImBack,
-                                    Value = x
-                                }).ToList()
-                            };
-                            await context.SendActivityAsync(reply, token);
-                        }
-                        else
-                        {
-                            var reply = MessageFactory.Text(message);
-                            reply.SuggestedActions = new SuggestedActions();
-                            await context.SendActivityAsync(reply, token);
-                        }
-                    }, default(CancellationToken));
+                    async (context, token) => await BylinasBot.BotCallback(message, context, token),
+                    default(CancellationToken));
             }
         }
         
-        private void CloseTcpClient(string userId, TcpClient tcpClient)
+        private void CloseTcpClient(string conversationId, TcpClient tcpClient)
         {
             tcpClient.Close();
-            _tcpClients.Remove(userId);
-            _logger.LogInformation("Closed TcpClient for userId={0}", userId);
+            _tcpClients.TryRemove(conversationId, out _);
+            _logger.LogInformation("Closed TcpClient for conversationId={0}", conversationId);
         }
 
         private static async Task<string> ReadData(TcpClient client)

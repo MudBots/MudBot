@@ -8,15 +8,15 @@ namespace MudBot
 {
     public class MultiCredentialProvider : ICredentialProvider
     {
-        private readonly Dictionary<string, string> _credentials;
+        private readonly Dictionary<string, string> _credentials = new Dictionary<string, string>();
 
         public MultiCredentialProvider(IConfiguration configuration)
         {
-            _credentials = new Dictionary<string, string>
-            {
-                { configuration["MicrosoftAppId_Bylinas"], configuration["MicrosoftAppPassword_Bylinas"] },
-                { configuration["MicrosoftAppId_SphereOfWorlds"], configuration["MicrosoftAppPassword_SphereOfWorlds"] }
-            };
+            if (!string.IsNullOrEmpty(configuration["MicrosoftAppId_Bylinas"]))
+                _credentials.Add(configuration["MicrosoftAppId_Bylinas"], configuration["MicrosoftAppPassword_Bylinas"]);
+            
+            if (!string.IsNullOrEmpty(configuration["MicrosoftAppId_SphereOfWorlds"]))
+                _credentials.Add(configuration["MicrosoftAppId_SphereOfWorlds"], configuration["MicrosoftAppPassword_SphereOfWorlds"]);
         }
 
         public Task<bool> IsValidAppIdAsync(string appId)

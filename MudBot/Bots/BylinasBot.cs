@@ -1,7 +1,7 @@
 ﻿using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Bot.Builder;
@@ -14,62 +14,50 @@ namespace MudBot.Bots
     {
         private readonly BylinasService _bylinasService;
 
-        // Dependency injected dictionary for storing ConversationReference objects used in NotifyController to proactively message users
-        private readonly ConcurrentDictionary<string, ConversationReference> _conversationReferences;
-
-        public BylinasBot(BylinasService bylinasService, ConcurrentDictionary<string, ConversationReference> conversationReferences)
+        public BylinasBot(BylinasService bylinasService)
         {
             _bylinasService = bylinasService;
-            _conversationReferences = conversationReferences;
-        }
-
-        private void AddConversationReference(Activity activity)
-        {
-            var conversationReference = activity.GetConversationReference();
-            _conversationReferences.AddOrUpdate(conversationReference.User.Id, conversationReference, (key, newValue) => conversationReference);
         }
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext,
             CancellationToken cancellationToken)
         {
-            AddConversationReference(turnContext.Activity as Activity);
-            var userId = turnContext.Activity.GetConversationReference().User.Id;
+            var conversationId = turnContext.Activity.Conversation.Id;
+            var message = turnContext.Activity.Text;
 
-            if (turnContext.Activity.Text == "/start")
-                _bylinasService.CloseTcpClient(userId);
-
-            if (turnContext.Activity.Text == "/stop")
+            switch (message)
             {
-                _bylinasService.CloseTcpClient(userId);
-                var reply = MessageFactory.Text("Вы вышли из игры.");
-
-                reply.SuggestedActions = new SuggestedActions()
+                case "/start":
+                    _bylinasService.CloseTcpClient(conversationId);
+                    break;
+                case "/stop":
                 {
-                    Actions = new List<CardAction>()
+                    _bylinasService.CloseTcpClient(conversationId);
+                    var reply = MessageFactory.Text("Вы вышли из игры.");
+
+                    reply.SuggestedActions = new SuggestedActions()
                     {
-                        new CardAction() { Title = "Играть!", Type = ActionTypes.ImBack, Value = "Играть!" },
-                    },
-                };
-                await turnContext.SendActivityAsync(reply, cancellationToken);
-                return;
+                        Actions = new List<CardAction>()
+                        {
+                            new CardAction() { Title = "Играть!", Type = ActionTypes.ImBack, Value = "Играть!" },
+                        },
+                    };
+                    await turnContext.SendActivityAsync(reply, cancellationToken);
+                    return;
+                }
+                case "/return":
+                    message = Environment.NewLine;
+                    break;
+                case "/help":
+                {
+                    var reply = MessageFactory.Text(
+                        @"Бот позволяет подключиться к текстовой онлайн-игре ""Былины"" (bylins.su). Сайт бота https://github.com/kcherenkov/BylinasBot");
+                    await turnContext.SendActivityAsync(reply, cancellationToken);
+                    return;
+                }
             }
 
-            if (turnContext.Activity.Text == "/return")
-            {
-                await _bylinasService.SendMessage(userId, Environment.NewLine);
-                return;
-            }
-
-            if (turnContext.Activity.Text == "/help")
-            {
-                var reply = MessageFactory.Text(
-                    @"Бот позволяет подключиться к текстовой онлайн-игре ""Былины"" (bylins.su). Сайт бота https://github.com/kcherenkov/BylinasBot");
-                await turnContext.SendActivityAsync(reply, cancellationToken);
-                return;
-            }
-
-            await _bylinasService.SendMessage(userId,
-                turnContext.Activity.Text);
+            await _bylinasService.SendMessage(conversationId, message, turnContext.Activity.GetConversationReference());
         }
 
         protected override async Task OnMembersAddedAsync(IList<ChannelAccount> membersAdded,
@@ -97,11 +85,66 @@ namespace MudBot.Bots
             }
         }
 
-        protected override Task OnConversationUpdateActivityAsync(ITurnContext<IConversationUpdateActivity> turnContext, CancellationToken cancellationToken)
+        public static async Task BotCallback(string message, ITurnContext turnContext,
+            CancellationToken cancellationToken)
         {
-            AddConversationReference(turnContext.Activity as Activity);
+            //message = message.Replace("яя", "я");
+            message = new Regex(@"\x1B\[[^@-~]*[@-~]").Replace(message, String.Empty);
+            message = string.Format("```{1}{0}{1}```", message, Environment.NewLine);
 
-            return base.OnConversationUpdateActivityAsync(turnContext, cancellationToken);
+            List<string> actions;
+            if (message.Contains("1)") && message.Contains("2)"))
+            {
+                actions = new List<string> {"1", "2"};
+                int i = 3;
+                while (message.Contains(i + ")"))
+                {
+                    actions.Add(i.ToString());
+                    i++;
+                }
+            }
+            else
+            {
+                actions = message.Split(' ', '\n')
+                    .Where(x => x.Contains('[') && x.Any(char.IsLetter))
+                    .Select(x => x.Replace("[", string.Empty).Replace("]", string.Empty))
+                    .ToList();
+            }
+
+            var exitsPattern = "Вых:";
+            var exitsIndex = message.LastIndexOf(exitsPattern);
+            if (exitsIndex >= 0)
+            {
+                exitsIndex += exitsPattern.Length;
+                if (message.IndexOf('С', exitsIndex) != -1) actions.Add("С");
+                if (message.IndexOf('В', exitsIndex) != -1) actions.Add("В");
+                if (message.IndexOf('Ю', exitsIndex) != -1) actions.Add("Ю");
+                if (message.IndexOf('З', exitsIndex) != -1) actions.Add("З");
+                if (message.IndexOf('^', exitsIndex) != -1) actions.Add("вв");
+                if (message.IndexOf('v', exitsIndex) != -1) actions.Add("вн");
+            }
+
+            if (message.Contains("<RETURN>"))
+            {
+                actions.Add("/return");
+            }
+
+            if (actions.Count > 0)
+            {
+                var reply = MessageFactory.Text(message);
+                reply.SuggestedActions = new SuggestedActions()
+                {
+                    Actions = actions.Select(x => new CardAction {Title = x, Type = ActionTypes.ImBack, Value = x})
+                        .ToList()
+                };
+                await turnContext.SendActivityAsync(reply, cancellationToken);
+            }
+            else
+            {
+                var reply = MessageFactory.Text(message);
+                reply.SuggestedActions = new SuggestedActions();
+                await turnContext.SendActivityAsync(reply, cancellationToken);
+            }
         }
     }
 }
