@@ -14,9 +14,9 @@ namespace MudBot.Bots
     {
         private readonly SphereOfWorldsService _sphereOfWorldsService;
 
-        public SphereOfWorldsBot(SphereOfWorldsService bylinasService)
+        public SphereOfWorldsBot(SphereOfWorldsService sphereOfWorldsService)
         {
-            _sphereOfWorldsService = bylinasService;
+            _sphereOfWorldsService = sphereOfWorldsService;
         }
 
         protected override async Task OnMessageActivityAsync(ITurnContext<IMessageActivity> turnContext,
