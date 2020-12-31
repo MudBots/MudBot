@@ -31,9 +31,6 @@ namespace MudBot
             // Create the Bot Framework Adapter with error handling enabled.
             services.AddSingleton<IBotFrameworkHttpAdapter, AdapterWithErrorHandler>();
 
-            // Create a global hashset for our ConversationReferences
-            services.AddSingleton<ConcurrentDictionary<string, ConversationReference>>();
-
             // Create the bot as a transient. In this case the ASP Controller is expecting an IBot.s
             services.AddTransient<BylinasBot>();
             services.AddTransient<SphereOfWorldsBot>();
