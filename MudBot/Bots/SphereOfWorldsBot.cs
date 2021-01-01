@@ -90,6 +90,7 @@ namespace MudBot.Bots
         {
             message = message.Replace("яя", "я");
             message = new Regex(@"\x1B\[[^@-~]*[@-~]").Replace(message, String.Empty);
+            message = message.Replace('`', '\''); // backticks throw errors for unknown reason
             message = string.Format("```{1}{0}{1}```", message, Environment.NewLine);
 
             List<string> actions;
