@@ -93,7 +93,7 @@ namespace MudBot.Bots
             message = message.Replace('`', '\''); // backticks throw errors for unknown reason
             message = string.Format("```{1}{0}{1}```", message, Environment.NewLine);
 
-            List<string> actions;
+            List<string> actions = new List<string>();
             if (message.Contains("1)") && message.Contains("2)"))
             {
                 actions = new List<string> {"1", "2"};
@@ -103,13 +103,6 @@ namespace MudBot.Bots
                     actions.Add(i.ToString());
                     i++;
                 }
-            }
-            else
-            {
-                actions = message.Split(' ', '\n')
-                    .Where(x => x.Contains('[') && x.Any(char.IsLetter))
-                    .Select(x => x.Replace("[", string.Empty).Replace("]", string.Empty))
-                    .ToList();
             }
 
             var exitsPattern = "Вых:";
