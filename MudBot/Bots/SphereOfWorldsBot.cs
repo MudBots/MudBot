@@ -51,7 +51,7 @@ namespace MudBot.Bots
                 case "/help":
                 {
                     var reply = MessageFactory.Text(
-                        @"Бот позволяет подключиться к текстовой онлайн-игре ""Сфера Миров"" (sowmud.ru). Сайт бота https://github.com/kcherenkov/BylinasBot");
+                        @"Бот позволяет подключиться к текстовой онлайн-игре ""Сфера Миров"" (sowmud.ru). Сайт бота https://github.com/MudBots/MudBot");
                     await turnContext.SendActivityAsync(reply, cancellationToken);
                     return;
                 }
